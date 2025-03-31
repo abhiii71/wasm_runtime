@@ -2,6 +2,7 @@ package vm
 
 import "errors"
 
+// FunctionTable maps function names to indices
 type FunctionTable struct {
 	table map[string]int
 }
@@ -16,6 +17,7 @@ func (ft *FunctionTable) AddFunction(name string, index int) {
 	ft.table[name] = index
 }
 
+// GetFunction retrieves a function index by name
 func (ft *FunctionTable) GetFunction(name string) (int, error) {
 	index, exists := ft.table[name]
 	if !exists {
