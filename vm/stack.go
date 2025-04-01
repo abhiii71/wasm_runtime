@@ -3,18 +3,21 @@ package vm
 import "errors"
 
 type Stack struct {
-	data []int64
+	data []int
 }
 
+// NewStack creates a new empty stack
 func NewStack() *Stack {
-	return &Stack{data: make([]int64, 0)}
+	return &Stack{data: []int{}}
 }
 
-func (s *Stack) Push(value int64) {
+// Push adds a value to the stack
+func (s *Stack) Push(value int) {
 	s.data = append(s.data, value)
 }
 
-func (s *Stack) Pop() (int64, error) {
+// Pop removes and returns the top value of the stack
+func (s *Stack) Pop() (int, error) {
 	if len(s.data) == 0 {
 		return 0, errors.New("stack underflow")
 	}
@@ -23,7 +26,7 @@ func (s *Stack) Pop() (int64, error) {
 	return val, nil
 }
 
-func (s *Stack) Peek() (int64, error) {
+func (s *Stack) Peek() (int, error) {
 	if len(s.data) == 0 {
 		return 0, errors.New("Stack is empty")
 	}

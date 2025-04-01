@@ -4,38 +4,80 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/abhiii71/wasm_runtime/parser"
+	"github.com/abhiii71/wasm_runtime/memory"
 )
 
-// ExecuteWASMFunction runs a parsed  WASM function
-func ExecuteWASMFunction(stack *Stack, function parser.WASMFunction) error {
-	for i := 0; i < len(function.Code); i++ {
-		opcode := function.Code[i]
+type ExecutionEngine struct {
+	stack    *Stack         // stack for execution
+	memory   *memory.Memory // Memory for data storage
+	funcs    *FunctionTable // Function lookup table
+	bytecode []byte         // Load WASM bytecode
+	pc       int            // Program counter
+}
+
+// NewExecutionEngine intializes a new WASM execution engine
+func NewExecutionEngine(bytecode []byte, funcs *FunctionTable, memory *memory.Memory) *ExecutionEngine {
+	return &ExecutionEngine{
+		stack:    NewStack(),
+		memory:   memory,
+		funcs:    funcs,
+		bytecode: bytecode,
+		pc:       0,
+	}
+}
+
+// GetStack returns the execution stack for testing purposes
+func (e *ExecutionEngine) GetStack() *Stack {
+	return e.stack
+}
+
+// Run executes the WASM bytecode
+func (e *ExecutionEngine) Run() error {
+	for e.pc < len(e.bytecode) {
+		opcode := e.bytecode[e.pc] // Fetch instruction
+		e.pc++                     // Move to next  instruction
 
 		switch opcode {
 		case 0x41: // i32.const
-			i++
-			value := int64(function.Code[i])
-			stack.Push(value)
-			fmt.Println("Pushed: ", value)
-		case 0x6A: // i32.add
-			val1, err1 := stack.Pop()
-			val2, err2 := stack.Pop()
-			if err1 != nil || err2 != nil {
-				return errors.New("stack underflow")
-			}
-			stack.Push(val1 + val2)
-			fmt.Println("Added:", val1, "+", val2, "=", val1+val2)
+			value := int(e.bytecode[e.pc])
+			e.pc++
+			e.stack.Push(value)
 
-		case 0x6B: // i32.sub
-			val1, err1 := stack.Pop()
-			val2, err2 := stack.Pop()
-			if err1 != nil || err2 != nil {
+		case 0x6A: // i32.add
+			b, err := e.stack.Pop()
+			if err != nil {
 				return errors.New("stack underflow")
 			}
-			stack.Push(val1 - val2)
-			fmt.Println("Subtracted: ", val1, "-", val2, "=", val1-val2)
-		case 0x0B: // end
+			a, err := e.stack.Pop()
+			if err != nil {
+				return errors.New("stack underflow")
+			}
+			e.stack.Push(a + b)
+
+		case 0x28: // Load from memory(1.32.load)
+			address, err := e.stack.Pop()
+			if err != nil {
+				return errors.New("stack underflow")
+			}
+			value, err := e.memory.Load(address)
+			if err != nil {
+				return err
+			}
+			e.stack.Push(value)
+		case 0x36: // store to memory(i32.store)
+			value, err := e.stack.Pop()
+			if err != nil {
+				return errors.New("stack underflow")
+			}
+			address, err := e.stack.Pop()
+			if err != nil {
+				return errors.New("stack underflow")
+			}
+			err = e.memory.Store(address, value)
+			if err != nil {
+				return err
+			}
+		case 0x0B: // end of function
 			fmt.Println("Function execution compelete.")
 			return nil
 
